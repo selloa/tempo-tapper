@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tempo Tapper</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-app-region: drag;
+        }
+
+        /* Title bar */
+        .title-bar {
+            height: 32px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            -webkit-app-region: drag;
+        }
+
+        .title-bar-title {
+            font-size: 12px;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .window-controls {
+            display: flex;
+            -webkit-app-region: no-drag;
+        }
+
+        .window-control-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .window-control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .close-btn:hover {
+            background: #e81123;
+        }
+
+        /* Main content */
+        .main-content {
+            height: calc(100vh - 32px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            -webkit-app-region: no-drag;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .bpm-display {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            min-height: 1.2em;
+        }
+
+        .tap-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            font-size: 1.2em;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            -webkit-app-region: no-drag;
+        }
+
+        .tap-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .tap-button:active {
+            transform: scale(0.95);
+        }
+
+        .instructions {
+            margin-top: 20px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            padding: 5px 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .title {
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+
+        .metronome-status {
+            margin-top: 10px;
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-weight: bold;
+        }
+
+        .shortcuts {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 10px;
+            opacity: 0.5;
+            -webkit-app-region: no-drag;
+        }
+
+        /* Responsive design */
+        @media (max-width: 500px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .bpm-display {
+                font-size: 3em;
+            }
+            
+            .tap-button {
+                width: 100px;
+                height: 100px;
+            }
+        }
+
+        /* Focus styles */
+        body.focused .container {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Title bar -->
+    <div class="title-bar" id="title-bar">
+        <div class="title-bar-title">🎵 Tempo Tapper</div>
+        <div class="window-controls">
+            <button class="window-control-btn" id="minimize-btn">─</button>
+            <button class="window-control-btn" id="maximize-btn">□</button>
+            <button class="window-control-btn close-btn" id="close-btn">×</button>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <div class="container">
+            <div class="title">🎵 Tempo Tapper</div>
+            <div class="bpm-display" id="bpm">--</div>
+            <button class="tap-button" id="tapButton" onclick="tap()">
+                TAP
+            </button>
+            <div class="instructions">
+                Click the button or press any key to tap<br>
+                Keep a steady rhythm to get accurate BPM
+            </div>
+            <div class="status" id="status">Ready to tap!</div>
+            <div class="metronome-status" id="metronomeStatus"></div>
+            <div class="controls">
+                <button class="control-btn" onclick="reset()">Reset</button>
+                <button class="control-btn" id="metronomeBtn" onclick="toggleMetronome()">Start Metronome</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts info -->
+    <div class="shortcuts">
+        R: Restart | ESC: Close
+    </div>
+
+    <script src="renderer.js"></script>
+    <script>
+        let taps = [];
+        let lastTapTime = 0;
+        let isRunning = false;
+        let metronomeRunning = false;
+        let metronomeInterval = null;
+        let audioContext = null;
+        let oscillator = null;
+        let gainNode = null;
+        
+        // Initialize audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // Play metronome click
+        function playClick() {
+            if (!audioContext) return;
+            
+            // Resume audio context if suspended
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            // Create oscillator for click sound
+            const clickOsc = audioContext.createOscillator();
+            const clickGain = audioContext.createGain();
+            
+            clickOsc.connect(clickGain);
+            clickGain.connect(audioContext.destination);
+            
+            // Configure click sound (high-pitched beep)
+            clickOsc.frequency.setValueAtTime(800, audioContext.currentTime);
+            clickOsc.type = 'sine';
+            
+            // Configure volume envelope
+            clickGain.gain.setValueAtTime(0, audioContext.currentTime);
+            clickGain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+            clickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            // Play the click
+            clickOsc.start(audioContext.currentTime);
+            clickOsc.stop(audioContext.currentTime + 0.1);
+        }
+        
+        function tap() {
+            const now = Date.now();
+            if (lastTapTime > 0) {
+                const interval = now - lastTapTime;
+                taps.push(interval);
+                
+                // Keep only last 8 taps for better accuracy
+                if (taps.length > 8) {
+                    taps = taps.slice(-8);
+                }
+                
+                // Calculate BPM
+                if (taps.length >= 2) {
+                    const avgInterval = taps.reduce((a, b) => a + b, 0) / taps.length;
+                    const bpm = Math.round(60000 / avgInterval);
+                    document.getElementById('bpm').textContent = bpm;
+                    document.getElementById('status').textContent = 
+                        'Taps: ' + taps.length + ' | Avg: ' + Math.round(avgInterval) + 'ms';
+                    
+                    // Update metronome if running
+                    if (metronomeRunning) {
+                        startMetronome(bpm);
+                    }
+                }
+            }
+            lastTapTime = now;
+            
+            // Visual feedback
+            const button = document.getElementById('tapButton');
+            button.style.background = 'rgba(255, 255, 255, 0.4)';
+            setTimeout(() => {
+                button.style.background = 'rgba(255, 255, 255, 0.2)';
+            }, 100);
+        }
+        
+        function reset() {
+            taps = [];
+            lastTapTime = 0;
+            document.getElementById('bpm').textContent = '--';
+            document.getElementById('status').textContent = 'Ready to tap!';
+            
+            // Stop metronome if running
+            if (metronomeRunning) {
+                stopMetronome();
+            }
+        }
+        
+        function toggleMetronome() {
+            if (metronomeRunning) {
+                stopMetronome();
+            } else {
+                const bpmText = document.getElementById('bpm').textContent;
+                if (bpmText === '--') {
+                    alert('Please tap to set a BPM first!');
+                    return;
+                }
+                const bpm = parseInt(bpmText);
+                startMetronome(bpm);
+            }
+        }
+        
+        function startMetronome(bpm) {
+            if (metronomeRunning) {
+                stopMetronome();
+            }
+            
+            initAudio();
+            
+            metronomeRunning = true;
+            const intervalMs = 60000 / bpm; // Convert BPM to milliseconds
+            
+            // Update UI
+            document.getElementById('metronomeBtn').textContent = 'Stop Metronome';
+            document.getElementById('metronomeBtn').classList.add('active');
+            document.getElementById('metronomeStatus').textContent = `Metronome running at ${bpm} BPM`;
+            
+            // Play first click immediately
+            playClick();
+            
+            // Set up interval for subsequent clicks
+            metronomeInterval = setInterval(() => {
+                playClick();
+            }, intervalMs);
+        }
+        
+        function stopMetronome() {
+            if (metronomeInterval) {
+                clearInterval(metronomeInterval);
+                metronomeInterval = null;
+            }
+            
+            metronomeRunning = false;
+            
+            // Update UI
+            document.getElementById('metronomeBtn').textContent = 'Start Metronome';
+            document.getElementById('metronomeBtn').classList.remove('active');
+            document.getElementById('metronomeStatus').textContent = '';
+        }
+        
+        // Enhanced keyboard support - any key to tap
+        document.addEventListener('keydown', function(event) {
+            // Any key to tap (except special keys)
+            if (!event.ctrlKey && !event.altKey && !event.metaKey && 
+                event.key !== 'Escape' && event.key !== 'F11' && 
+                event.key !== 'r' && event.key !== 'R') {
+                event.preventDefault();
+                tap();
+            }
+        });
+        
+        // Reset after 3 seconds of no tapping (only if metronome is not running)
+        setInterval(() => {
+            const now = Date.now();
+            if (now - lastTapTime > 3000 && taps.length > 0 && !metronomeRunning) {
+                reset();
+            }
+        }, 1000);
+        
+        // Prevent context menu on right click
+        document.addEventListener('contextmenu', function(event) {
+            event.preventDefault();
+        });
+        
+        // Focus the page for keyboard input
+        window.addEventListener('click', function() {
+            document.body.focus();
+        });
+        
+        // Set initial focus
+        document.body.focus();
+    </script>
+</body>
+</html>
