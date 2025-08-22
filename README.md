@@ -1,6 +1,8 @@
 # Tempo Tapper - Enhanced Edition
 
-A BPM (Beats Per Minute) calculator that detects tempo from keyboard input, mouse clicks, or touch taps. This is an enhanced version of the original [tempo-tapper](https://github.com/nobuyo/tempo-tapper) by [nobuyo](https://github.com/nobuyo).
+> A BPM (Beats Per Minute) calculator that detects tempo from keyboard input, mouse clicks, or touch taps. This is an enhanced version of the original [tempo-tapper](https://github.com/nobuyo/tempo-tapper) by [nobuyo](https://github.com/nobuyo).
+
+**Topics:** `bpm-calculator` `tempo-detector` `music-tools` `rhythm-tapper` `web-app` `go` `html` `javascript` `cross-platform` `mobile-friendly`
 
 ## 🎵 Features
 
