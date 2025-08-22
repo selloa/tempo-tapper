@@ -72,6 +72,7 @@
             display: flex;
             justify-content: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         .control-btn {
             background: rgba(255, 255, 255, 0.2);
@@ -86,9 +87,19 @@
         .control-btn:hover {
             background: rgba(255, 255, 255, 0.3);
         }
+        .control-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
         .title {
             margin-bottom: 10px;
             font-size: 1.5em;
+        }
+        .metronome-status {
+            margin-top: 10px;
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -104,8 +115,10 @@
             Keep a steady rhythm to get accurate BPM
         </div>
         <div class="status" id="status">Ready to tap!</div>
+        <div class="metronome-status" id="metronomeStatus"></div>
         <div class="controls">
             <button class="control-btn" onclick="reset()">Reset</button>
+            <button class="control-btn" id="metronomeBtn" onclick="toggleMetronome()">Start Metronome</button>
             <button class="control-btn" onclick="toggleFullscreen()">Fullscreen</button>
         </div>
     </div>
@@ -114,6 +127,48 @@
         let taps = [];
         let lastTapTime = 0;
         let isRunning = false;
+        let metronomeRunning = false;
+        let metronomeInterval = null;
+        let audioContext = null;
+        let oscillator = null;
+        let gainNode = null;
+        
+        // Initialize audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // Play metronome click
+        function playClick() {
+            if (!audioContext) return;
+            
+            // Resume audio context if suspended
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            // Create oscillator for click sound
+            const clickOsc = audioContext.createOscillator();
+            const clickGain = audioContext.createGain();
+            
+            clickOsc.connect(clickGain);
+            clickGain.connect(audioContext.destination);
+            
+            // Configure click sound (high-pitched beep)
+            clickOsc.frequency.setValueAtTime(800, audioContext.currentTime);
+            clickOsc.type = 'sine';
+            
+            // Configure volume envelope
+            clickGain.gain.setValueAtTime(0, audioContext.currentTime);
+            clickGain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+            clickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            // Play the click
+            clickOsc.start(audioContext.currentTime);
+            clickOsc.stop(audioContext.currentTime + 0.1);
+        }
         
         function tap() {
             const now = Date.now();
@@ -133,6 +188,11 @@
                     document.getElementById('bpm').textContent = bpm;
                     document.getElementById('status').textContent = 
                         'Taps: ' + taps.length + ' | Avg: ' + Math.round(avgInterval) + 'ms';
+                    
+                    // Update metronome if running
+                    if (metronomeRunning) {
+                        startMetronome(bpm);
+                    }
                 }
             }
             lastTapTime = now;
@@ -150,6 +210,63 @@
             lastTapTime = 0;
             document.getElementById('bpm').textContent = '--';
             document.getElementById('status').textContent = 'Ready to tap!';
+            
+            // Stop metronome if running
+            if (metronomeRunning) {
+                stopMetronome();
+            }
+        }
+        
+        function toggleMetronome() {
+            if (metronomeRunning) {
+                stopMetronome();
+            } else {
+                const bpmText = document.getElementById('bpm').textContent;
+                if (bpmText === '--') {
+                    alert('Please tap to set a BPM first!');
+                    return;
+                }
+                const bpm = parseInt(bpmText);
+                startMetronome(bpm);
+            }
+        }
+        
+        function startMetronome(bpm) {
+            if (metronomeRunning) {
+                stopMetronome();
+            }
+            
+            initAudio();
+            
+            metronomeRunning = true;
+            const intervalMs = 60000 / bpm; // Convert BPM to milliseconds
+            
+            // Update UI
+            document.getElementById('metronomeBtn').textContent = 'Stop Metronome';
+            document.getElementById('metronomeBtn').classList.add('active');
+            document.getElementById('metronomeStatus').textContent = `Metronome running at ${bpm} BPM`;
+            
+            // Play first click immediately
+            playClick();
+            
+            // Set up interval for subsequent clicks
+            metronomeInterval = setInterval(() => {
+                playClick();
+            }, intervalMs);
+        }
+        
+        function stopMetronome() {
+            if (metronomeInterval) {
+                clearInterval(metronomeInterval);
+                metronomeInterval = null;
+            }
+            
+            metronomeRunning = false;
+            
+            // Update UI
+            document.getElementById('metronomeBtn').textContent = 'Start Metronome';
+            document.getElementById('metronomeBtn').classList.remove('active');
+            document.getElementById('metronomeStatus').textContent = '';
         }
         
         function toggleFullscreen() {
@@ -170,16 +287,19 @@
             } else if (event.code === 'KeyR') {
                 event.preventDefault();
                 reset();
+            } else if (event.code === 'KeyM') {
+                event.preventDefault();
+                toggleMetronome();
             } else if (event.code === 'KeyF') {
                 event.preventDefault();
                 toggleFullscreen();
             }
         });
         
-        // Reset after 3 seconds of no tapping
+        // Reset after 3 seconds of no tapping (only if metronome is not running)
         setInterval(() => {
             const now = Date.now();
-            if (now - lastTapTime > 3000 && taps.length > 0) {
+            if (now - lastTapTime > 3000 && taps.length > 0 && !metronomeRunning) {
                 reset();
             }
         }, 1000);
