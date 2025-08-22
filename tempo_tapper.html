@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tempo Tapper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            user-select: none;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .bpm-display {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            min-height: 1.2em;
+        }
+        .tap-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            font-size: 1.2em;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+        .tap-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        .tap-button:active {
+            transform: scale(0.95);
+        }
+        .instructions {
+            margin-top: 20px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .status {
+            margin-top: 10px;
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            padding: 5px 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .title {
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">🎵 Tempo Tapper</div>
+        <div class="bpm-display" id="bpm">--</div>
+        <button class="tap-button" id="tapButton" onclick="tap()">
+            TAP
+        </button>
+        <div class="instructions">
+            Click the button or press SPACE to tap<br>
+            Keep a steady rhythm to get accurate BPM
+        </div>
+        <div class="status" id="status">Ready to tap!</div>
+        <div class="controls">
+            <button class="control-btn" onclick="reset()">Reset</button>
+            <button class="control-btn" onclick="toggleFullscreen()">Fullscreen</button>
+        </div>
+    </div>
+
+    <script>
+        let taps = [];
+        let lastTapTime = 0;
+        let isRunning = false;
+        
+        function tap() {
+            const now = Date.now();
+            if (lastTapTime > 0) {
+                const interval = now - lastTapTime;
+                taps.push(interval);
+                
+                // Keep only last 8 taps for better accuracy
+                if (taps.length > 8) {
+                    taps = taps.slice(-8);
+                }
+                
+                // Calculate BPM
+                if (taps.length >= 2) {
+                    const avgInterval = taps.reduce((a, b) => a + b, 0) / taps.length;
+                    const bpm = Math.round(60000 / avgInterval);
+                    document.getElementById('bpm').textContent = bpm;
+                    document.getElementById('status').textContent = 
+                        'Taps: ' + taps.length + ' | Avg: ' + Math.round(avgInterval) + 'ms';
+                }
+            }
+            lastTapTime = now;
+            
+            // Visual feedback
+            const button = document.getElementById('tapButton');
+            button.style.background = 'rgba(255, 255, 255, 0.4)';
+            setTimeout(() => {
+                button.style.background = 'rgba(255, 255, 255, 0.2)';
+            }, 100);
+        }
+        
+        function reset() {
+            taps = [];
+            lastTapTime = 0;
+            document.getElementById('bpm').textContent = '--';
+            document.getElementById('status').textContent = 'Ready to tap!';
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log('Error attempting to enable fullscreen:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        // Keyboard support
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                tap();
+            } else if (event.code === 'KeyR') {
+                event.preventDefault();
+                reset();
+            } else if (event.code === 'KeyF') {
+                event.preventDefault();
+                toggleFullscreen();
+            }
+        });
+        
+        // Reset after 3 seconds of no tapping
+        setInterval(() => {
+            const now = Date.now();
+            if (now - lastTapTime > 3000 && taps.length > 0) {
+                reset();
+            }
+        }, 1000);
+        
+        // Prevent context menu on right click
+        document.addEventListener('contextmenu', function(event) {
+            event.preventDefault();
+        });
+        
+        // Focus the page for keyboard input
+        window.addEventListener('click', function() {
+            document.body.focus();
+        });
+        
+        // Set initial focus
+        document.body.focus();
+    </script>
+</body>
+</html>
